@@ -1,0 +1,124 @@
+---
+title: "Make figures"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Packages
+
+```{r}
+library(ggplot2)
+library(scales)
+library(patchwork)
+library(reshape2)
+```
+
+# Figure 1
+
+```{r}
+summaryData <- readRDS("./Fig1_data.rds")
+
+a <- ggplot(summaryData,aes(y= log10(Number), x = year)) + geom_smooth(method = "lm") + geom_point(size = 2, alpha = 0.5, aes(col = Tech)) +
+  theme_minimal() + scale_x_continuous(breaks = pretty_breaks()) + viridis::scale_color_viridis(discrete = T) + theme(legend.position="none")
+
+b <- ggplot(summaryData,aes(x = log10(Number), y = pct)) + geom_smooth(method = "lm") + geom_point(aes(col = Tech)) +
+  theme_minimal() + viridis::scale_color_viridis(discrete = T)
+
+a | b
+```
+
+# Figure 2
+
+```{r}
+explainedVsSparsity <- readRDS("./Fig2_data.rds")
+
+c <- ggplot(explainedVsSparsity,aes(r,detectionRate)) + geom_point() + facet_grid(~dataset) + geom_smooth(method = "lm") +
+  theme_minimal() + labs(x = "r", y = "detection rate (%)") + theme(legend.position = "none") + xlim(0.7,1)
+
+c
+```
+
+# Figure 3
+
+## Data
+
+```{r}
+cellType_predRes <- readRDS("./Fig3_data.rds")[["cellType_predRes"]]
+cellType_predRes_shuff <- readRDS("./Fig3_data.rds")[["cellType_predRes_shuff"]]
+MDD_DetectionRate <- readRDS("./Fig3_data.rds")[["MDD_DetectionRate"]]
+MDD_Mean <- readRDS("./Fig3_data.rds")[["MDD_Mean"]]
+PseudoDEA_Res <- readRDS("./Fig3_data.rds")[["PseudoDEA_Res"]]
+```
+
+## Figure 3a and b
+
+```{r}
+summ <- unique(cellType_predRes[,1:2])
+summ$F1 <- apply(summ,1, function(row){
+  median(cellType_predRes[cellType_predRes$dataset == row[1] & cellType_predRes$method == row[2],"medianF1"])
+})
+summ$global_accuracy <- apply(summ,1, function(row){
+  median(cellType_predRes[cellType_predRes$dataset == row[1] & cellType_predRes$method == row[2],"global_accuracy"])
+})
+cellType_predRes$method <- factor(cellType_predRes$method,levels = c("counts_SVM","binary_KNN","counts_SingleR","binary_SingleR","counts_scPred","binary_scPred"))
+F1_p <- ggplot(cellType_predRes,aes(dataset,method,fill = medianF1)) + geom_tile() + viridis::scale_fill_viridis(limits = c(0,1)) +
+  geom_text(aes(dataset, method, label = round(medianF1,3)), color = "black", size = 4) + theme_minimal()
+acc_p <- ggplot(cellType_predRes,aes(dataset,method,fill = global_accuracy)) + geom_tile() + viridis::scale_fill_viridis(limits = c(0,1)) +
+  geom_text(aes(dataset, method, label = round(global_accuracy,3)), color = "black", size = 4) + theme_minimal()
+F1_p | acc_p
+```
+
+
+## Figure 3c and d
+
+```{r}
+summ <- unique(cellType_predRes_shuff[,1:2])
+summ$F1 <- apply(summ,1, function(row){
+  median(cellType_predRes_shuff[cellType_predRes_shuff$dataset == row[1] & cellType_predRes_shuff$method == row[2],"medianF1"])
+})
+summ$global_accuracy <- apply(summ,1, function(row){
+  median(cellType_predRes_shuff[cellType_predRes_shuff$dataset == row[1] & cellType_predRes_shuff$method == row[2],"global_accuracy"])
+})
+cellType_predRes_shuff$method <- factor(cellType_predRes_shuff$method,levels = c("counts_SVM","binary_KNN","counts_SingleR","binary_SingleR","counts_scPred","binary_scPred"))
+
+F1_p <- ggplot(cellType_predRes_shuff,aes(dataset,method,fill = medianF1)) + geom_tile() + viridis::scale_fill_viridis(limits = c(0,1)) +
+  geom_text(aes(dataset, method, label = round(medianF1,3)), color = "black", size = 4) + theme_minimal()
+
+acc_p <- ggplot(cellType_predRes_shuff,aes(dataset,method,fill = global_accuracy)) + geom_tile() + viridis::scale_fill_viridis(limits = c(0,1)) +
+  geom_text(aes(dataset, method, label = round(global_accuracy,3)), color = "black", size = 4) + theme_minimal()
+
+F1_p | acc_p
+```
+
+## Figure 3e 
+
+```{r}
+plotData <- data.frame("Detection.rate" = MDD_DetectionRate[,5],"Mean" = MDD_Mean[,5])
+p1 <- ggplot(plotData,aes(y = Detection.rate,x = log(Mean))) + geom_point() + theme_minimal()
+p1
+```
+
+
+## Figure 3f
+
+```{r}
+boxData <- melt(PseudoDEA_Res)
+p_box <- ggplot(boxData,aes(Var1,value,fill = Var1)) + geom_boxplot() + ylim(0.75,1)+ viridis::scale_fill_viridis(discrete = T) + theme_minimal() + labs(y = "F1") + coord_flip()
+p_box
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
